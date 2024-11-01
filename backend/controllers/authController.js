@@ -1,63 +1,52 @@
-import User from "../Models/UserModel";
-import bcryptjs from 'bcryptjs'
-export const signup=async(req ,res)=>{
-  try {
-    const {fullName , username , password , confimpassword , gender} = req.body; 
-    if(password!== confimpassword){
-      res.status(400).json({error:"confirmed  password do not much with password"})     
-    }
-    const user = User.findOne({username})
-    if(user){
-      res.status(400).json({error:"User not exist "})
-    }
-    const salt = await bcryptjs.genSalt(6)
-    const hashedPassword = await bcryptjs.hash(password , salt)
+import User from "../Models/UserModel.js"; // Ensure the path is correct
+import bcryptjs from 'bcryptjs';
 
+// Signup function
+export const signup = async (req, res) => {
+  try {
+    const { fullName, username, password, confirmpassword, gender } = req.body;
+
+    // Check if passwords match
+    if (password !== confirmpassword) {
+      return res.status(400).json({ error: "Confirmed password does not match the password" });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ error: "User already exists" });
+    }
+
+    // Hash the password
+    const salt = await bcryptjs.genSalt(6);
+    const hashedPassword = await bcryptjs.hash(password, salt);
+
+    // Generate profile picture URL based on gender
     const profilePicBoy = `https://avatar.iran.liara.run/public/boy${username}`;
     const profilePicGirl = `https://avatar.iran.liara.run/public/girl${username}`;
+    const profilePic = gender === "male" ? profilePicBoy : profilePicGirl;
 
+    // Create a new user
     const newUser = new User({
-      fullName: fullName,
-      username: username,
-      password: password,
+      fullName,
+      username,
+      password: hashedPassword, 
       gender,
-      profilePic : gender ==="male" ? profilePicBoy : profilePicGirl,
+      profilePic,
+    });
 
-    })
-    
-    if(newUser){
-      await newUser.save();
-      res.status(200).json({
-        _id : newUser._id,
-        username : newUser.username,
-        gender: newUser.gender,
-        profilePic: newUser.profilePic
-      })
-    }else{
-      return res.status(400).json({error: "User Not found! "})
-    }
-    
-  } catch (error) {
-    console.log("error in login infos");
-    res.status(400).json({error:"internal error in signup part"})
-  }
-}
+    await newUser.save();
 
-export const login=async(req, res)=>{
-  try {
-    
-  } catch (error) {
-    console.log("error in login server");
-    res.status(500).json({error:"internal error in login part"})
-  }
-}
+    return res.status(201).json({
+      _id: newUser._id,
+      username: newUser.username,
+      gender: newUser.gender,
+      profilePic: newUser.profilePic,
+    });
 
-export const logout = async(req,res)=>{
-  try {
-    
   } catch (error) {
-    console.log("error in logout server");
-    res.status(500).json({error:"internal error in logour part"})
-    
+    console.error("Error in signup:", error);
+    return res.status(500).json({ error: "Internal error in signup process" });
   }
-}
+};
+
